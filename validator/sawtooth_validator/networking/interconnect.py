@@ -238,10 +238,10 @@ class _SendReceive:
     @asyncio.coroutine
     def _do_router_heartbeat(self):
         check_time = time.time()
+        #lock?
         expired = \
             [(ident, check_time - timestamp)
-             for ident, timestamp
-             in self._last_message_times.items()
+             for ident, timestamp in self._last_message_times.items()
              if check_time - timestamp > self._heartbeat_interval]
         for zmq_identity, elapsed in expired:
             if self._is_connection_lost(
@@ -287,10 +287,10 @@ class _SendReceive:
     def _do_dealer_heartbeat(self):
         if self._last_message_time and \
                 self._is_connection_lost(self._last_message_time):
+            elapsed = time.time() - self._last_message_time
             LOGGER.info("No response from %s in %s seconds"
                         " - removing connection.",
-                        self._connection,
-                        self._last_message_time)
+                        self._connection, elapsed)
             connection_id = hashlib.sha512(
                 self.connection.encode()).hexdigest()
             if connection_id in self._connections:
@@ -837,7 +837,7 @@ class Interconnect:
 
     def connection_id_to_endpoint(self, connection_id):
         """
-        Get stored public key for a connection.
+        Get stored endpoint for a connection.
         """
         with self._connections_lock:
             try:
