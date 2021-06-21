@@ -290,7 +290,7 @@ class Gossip:
                         connection_id, self._peers)
             self._topology.set_connection_status(connection_id, PeerStatus.TEMP)
         else:
-            LOGGER.debug("Unregister peer failed as connection was not registered: %s",
+            LOGGER.debug("Unregister peer failed as peer was not registered: %s",
                         connection_id)
 
     def unregister_peer(self, connection_id):
@@ -396,6 +396,8 @@ class Gossip:
 
     def send(self, message_type, message, connection_id, one_way=False):
         """Sends a message via the network.
+
+        Note: Needs Lock.
 
         Args:
             message_type (str): The type of the message.
@@ -757,6 +759,8 @@ class ConnectionManager(InstrumentedThread):
             del self._connection_statuses[connection_id]
 
     def remove_temp_endpoint(self, endpoint):
+        """ Needs sync
+        """
         if endpoint in self._temp_endpoints:
             del self._temp_endpoints[endpoint]
 
