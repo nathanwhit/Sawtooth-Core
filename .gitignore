@@ -67,7 +67,8 @@
 /integration/**/__pycache__/
 
 /rest_api/build/
-/rest_api/sawtooth_rest_api/protobuf/
+/rest_api/sawtooth_rest_api_python/protobuf/
+/rest_api/sawtooth-rest-api/target
 /rest_api/**/__pycache__/
 
 /validator/build/
