@@ -52,4 +52,6 @@ RUN cd /ccprocessor-rust \
  && rm -rf ./bin/ \
  && mkdir -p ./bin/ \
  && cargo build --release \
- && cp ./target/release/ccprocessor-rust ./bin/ccprocessor-rust
+ && cp ./target/release/ccprocessor-rust ./bin/ccprocessor-rust \
+ && cargo build --release --features 'old-sawtooth' \
+ && cp ./target/release/ccprocessor-rust ./bin/ccprocessor-rust-1.7
