@@ -20,6 +20,8 @@ use cpython::ObjectProtocol;
 
 use crate::proto::events::Event;
 use crate::proto::transaction_receipt::StateChange;
+use crate::proto::EventFfi;
+use crate::proto::StateChangeFfi;
 
 use crate::scheduler::TxnExecutionResult;
 
@@ -87,8 +89,8 @@ fn try_pyobj_to_transaction_result(
     let signature = pyobj.getattr(py, "signature")?.extract(py)?;
     let is_valid = pyobj.getattr(py, "is_valid")?.extract(py)?;
     let beginning_state_hash = pyobj.getattr(py, "state_hash")?.extract(py)?;
-    let state_changes = pyobj.getattr(py, "state_changes")?.extract(py)?;
-    let events = pyobj.getattr(py, "events")?.extract(py)?;
+    let state_changes: Vec<StateChangeFfi> = pyobj.getattr(py, "state_changes")?.extract(py)?;
+    let events: Vec<EventFfi> = pyobj.getattr(py, "events")?.extract(py)?;
     let data = pyobj.getattr(py, "data")?.extract(py)?;
     let error_message = pyobj.getattr(py, "error_message")?.extract(py)?;
     let error_data = pyobj.getattr(py, "error_data")?.extract(py)?;
@@ -97,15 +99,18 @@ fn try_pyobj_to_transaction_result(
         signature,
         is_valid,
         state_hash: beginning_state_hash,
-        state_changes,
-        events,
+        state_changes: state_changes
+            .into_iter()
+            .map(|StateChangeFfi(s)| s)
+            .collect(),
+        events: events.into_iter().map(|EventFfi(e)| e).collect(),
         data,
         error_message,
         error_data,
     })
 }
 
-impl<'source> FromPyObject<'source> for StateChange {
+impl<'source> FromPyObject<'source> for StateChangeFfi {
     fn extract(py: cpython::Python, obj: &'source cpython::PyObject) -> cpython::PyResult<Self> {
         let state_change_bytes = obj
             .call_method(py, "SerializeToString", cpython::NoArgs, None)
@@ -113,17 +118,17 @@ impl<'source> FromPyObject<'source> for StateChange {
             .extract::<Vec<u8>>(py)?;
         let state_change: StateChange =
             ::protobuf::Message::parse_from_bytes(state_change_bytes.as_slice()).unwrap();
-        Ok(state_change)
+        Ok(StateChangeFfi(state_change))
     }
 }
 
-impl<'source> FromPyObject<'source> for Event {
+impl<'source> FromPyObject<'source> for EventFfi {
     fn extract(py: cpython::Python, obj: &'source cpython::PyObject) -> cpython::PyResult<Self> {
         let event_bytes = obj
             .call_method(py, "SerializeToString", cpython::NoArgs, None)
             .unwrap()
             .extract::<Vec<u8>>(py)?;
         let event: Event = ::protobuf::Message::parse_from_bytes(event_bytes.as_slice()).unwrap();
-        Ok(event)
+        Ok(EventFfi(event))
     }
 }

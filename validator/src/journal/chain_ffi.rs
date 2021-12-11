@@ -45,8 +45,8 @@ use std::time::Duration;
 
 use protobuf::Message;
 
-use crate::proto;
 use crate::proto::transaction_receipt::TransactionReceipt;
+use crate::proto::{self, TransactionReceiptFfi};
 
 #[repr(u32)]
 #[derive(Debug)]
@@ -337,6 +337,10 @@ impl ChainObserver for PyChainObserver {
         let gil_guard = Python::acquire_gil();
         let py = gil_guard.python();
 
+        let receipts: Vec<TransactionReceiptFfi> = receipts
+            .into_iter()
+            .map(|r| TransactionReceiptFfi(r.clone()))
+            .collect();
         self.py_observer
             .call_method(py, "chain_update", (block, receipts), None)
             .map(|_| ())
@@ -347,7 +351,7 @@ impl ChainObserver for PyChainObserver {
     }
 }
 
-impl ToPyObject for TransactionReceipt {
+impl ToPyObject for TransactionReceiptFfi {
     type ObjectType = PyObject;
 
     fn to_py_object(&self, py: Python) -> PyObject {
@@ -365,7 +369,7 @@ impl ToPyObject for TransactionReceipt {
             .call_method(
                 py,
                 "ParseFromString",
-                (cpython::PyBytes::new(py, &self.write_to_bytes().unwrap()).into_object(),),
+                (cpython::PyBytes::new(py, &self.0.write_to_bytes().unwrap()).into_object(),),
                 None,
             )
             .expect_pyerr("Unable to ParseFromString");

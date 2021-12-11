@@ -16,7 +16,7 @@
  */
 
 extern crate glob;
-extern crate protoc_rust;
+extern crate protobuf_codegen_pure;
 
 use std::env;
 use std::fs;
@@ -24,7 +24,7 @@ use std::io::Write;
 use std::path::Path;
 use std::time::{Duration, UNIX_EPOCH};
 
-use protoc_rust::Customize;
+use protobuf_codegen_pure::Customize;
 
 const PROTO_FILES_DIR: &str = "../protos";
 const PROTO_DIR_NAME: &str = "proto";
@@ -66,7 +66,7 @@ fn main() {
     if latest_change > last_build_time {
         println!("{:?}", proto_src_files);
         fs::create_dir_all(&dest_path).unwrap();
-        protoc_rust::Codegen::new()
+        protobuf_codegen_pure::Codegen::new()
             .out_dir(&dest_path.to_str().expect("Invalid proto destination path"))
             .inputs(
                 &proto_src_files
