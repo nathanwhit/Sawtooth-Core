@@ -69,8 +69,8 @@ impl PyLogger {
     fn init(verbosity: Level, py: Python) -> Result<(), SetLoggerError> {
         let logger =
             PyLogger::new(py).expect("Failed to instantiate Python logger; check library paths.");
-
-        log::set_boxed_logger(Box::new(logger))?;
+        env_logger::init();
+        // log::set_boxed_logger(Box::new(logger))?;
 
         log::set_max_level(verbosity.to_level_filter());
 
