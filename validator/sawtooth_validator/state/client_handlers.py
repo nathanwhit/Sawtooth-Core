@@ -853,28 +853,29 @@ class RewardListRequest(_ClientRequestHandler):
         except StopIteration:
             LOGGER.debug('Unable to find block "%s" in the block manager', request.head_id)
             raise _ResponseFailed(self._status.NO_ROOT)
-        #malformed/malicious checks
-        try:
-            # a + delta + padding == tip_height
-            a = last_pred_height
-            b = first_pred_height
-            delta = b - a
-            padding = head_block.block_num - b
+        # malformed/malicious checks
+        # try:
+        #     # a + delta + padding == tip_height
+        #     a = last_pred_height
+        #     b = first_pred_height
+        #     delta = b - a
+        #     padding = head_block.block_num - b
 
-            assert(0 < a)
-            assert(0 < delta)
-            assert(0 < padding)
-            INTERVAL_LIMIT = 20
-            assert(delta < INTERVAL_LIMIT)
-            DEPTH_LIMIT = 10000
-            #assert(padding < DEPTH_LIMIT)
-            if DEPTH_LIMIT < padding:
-                padding_traversal = False
-        except AssertionError as e:
-            info = "last_pred: {} first_pred {} tip_height {}".format(a, b, head_block.block_num)
-            LOGGER.warning(str(e))
-            LOGGER.debug(info)
-            raise _ResponseFailed(self._status.INTERNAL_ERROR)
+        #     assert(0 <= a)
+        #     assert(0 <= delta)
+        #     assert(0 <= padding)
+        #     INTERVAL_LIMIT = 20
+        #     assert(delta < INTERVAL_LIMIT)
+        #     DEPTH_LIMIT = 10000
+        #     #assert(padding < DEPTH_LIMIT)
+        #     if DEPTH_LIMIT < padding:
+        #         padding_traversal = False
+        # except AssertionError as e:
+        #     info = "last_pred: {} first_pred {} tip_height {}".format(
+        #         a, b, head_block.block_num)
+        #     LOGGER.warning(str(e))
+        #     LOGGER.debug(info)
+        #     raise _ResponseFailed(self._status.INTERNAL_ERROR)
 
         if not padding_traversal:
             try:
