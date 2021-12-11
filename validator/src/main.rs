@@ -10,6 +10,13 @@ fn main() {
     let gil = Python::acquire_gil();
     let py = gil.python();
 
+    py.run(
+        "import sys; sys.path.insert(0, '/home/nathanw/testenv/Sawtooth-Core-Bak/validator')",
+        None,
+        None,
+    )
+    .unwrap();
+
     let args = cli::parse_args();
 
     let verbosity: u64 = args.occurrences_of("verbose");
