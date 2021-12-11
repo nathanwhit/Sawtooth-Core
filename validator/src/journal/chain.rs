@@ -552,17 +552,15 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
             .block_validation_results
             .get(&block.header_signature)
             .is_some()
+            || self
+                .block_validation_results
+                .is_in_progress(&block.header_signature)
         {
             return;
         }
 
-        // Create block validation result, maked as in-validation
-        self.block_validation_results.insert(BlockValidationResult {
-            block_id: block.header_signature.clone(),
-            execution_results: vec![],
-            num_transactions: 0,
-            status: BlockStatus::InValidation,
-        });
+        self.block_validation_results
+            .mark_in_progress(block.header_signature.clone());
 
         // Submit for validation
         let sender = self.validation_result_sender.as_ref().expect(
