@@ -98,7 +98,7 @@ impl BlockValidationResultStore {
             self.in_progress_blocks
                 .lock()
                 .expect("The mutex is poisoned")
-                .insert(result.block_id)
+                .insert(result.block_id);
         }
     }
 
