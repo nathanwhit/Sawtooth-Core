@@ -34,7 +34,7 @@ from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 from sawtooth_validator.networking.dispatch import PreprocessorResult
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
-
+from sawtooth_validator.journal.block_manager import BlockManager
 from sawtooth_validator.protobuf import client_batch_pb2
 from sawtooth_validator.protobuf import client_block_pb2
 from sawtooth_validator.protobuf import client_state_pb2
@@ -690,24 +690,62 @@ class BatchStatusRequest(_ClientRequestHandler):
 
 
 class StateListRequest(_ClientRequestHandler):
-    def __init__(self, database, block_store):
+    def __init__(self, database, block_store, block_manager=None):
         super().__init__(
             client_state_pb2.ClientStateListRequest,
             client_state_pb2.ClientStateListResponse,
             validator_pb2.Message.CLIENT_STATE_LIST_RESPONSE,
             tree=MerkleDatabase(database),
             block_store=block_store)
+        self._block_manager = block_manager  # type: BlockManager
 
     def _respond(self, request):
         if request.state_root != '':
             if request.state_root.startswith('#'):
-                block_num_str = request.state_root[1:]
-                try:
-                    block_num = int(block_num_str)
-                    block = self._block_store.get_block_by_number(block_num)
-                    request.state_root = block.header.state_root_hash
-                except ValueError:
-                    request.state_root = ''
+                block_num_str: str = request.state_root[1:]
+                block_num_str, head_id = block_num_str.split('@', maxsplit=1)
+                block_num = int(block_num_str)
+                if self._block_manager:
+                    try:
+                        branch = self._block_manager.branch(head_id)
+                        head = next(branch)
+                        head_header = BlockHeader()
+                        head_header.ParseFromString(head.header)
+                        head_num = head_header.block_num
+                        iters = 0
+                        while head_num > block_num:
+                            head = next(branch)
+                            head_num -= 1
+                            iters += 1
+                        if head_num != block_num:
+                            LOGGER.error(
+                                'requested block with a higher block number than the tip')
+                            return self._wrap_response(
+                                self._status.NO_RESOURCE,
+                                state_root='',
+                                paging=client_list_control_pb2.ClientPagingResponse())
+                        # LOGGER.debug('%d iterations over branch', iters)
+                        request.state_root = BlockWrapper(
+                            head).header.state_root_hash
+                    except StopIteration:
+                        LOGGER.error(
+                            'No branch found matching head id %s', head_id)
+                        return self._wrap_response(
+                            self._status.NO_RESOURCE,
+                            state_root='',
+                            paging=client_list_control_pb2.ClientPagingResponse())
+                else:
+                    try:
+                        block_num = int(block_num_str)
+                        block = self._block_store.get_block_by_number(
+                            block_num)
+                        request.state_root = block.header.state_root_hash
+                    except ValueError:
+                        LOGGER.error('failed to find ')
+                        return self._wrap_response(
+                            self._status.NO_RESOURCE,
+                            state_root='',
+                            paging=client_list_control_pb2.ClientPagingResponse())
 
             if request.state_root != '':
                 self._validate_state_root(request.state_root)
