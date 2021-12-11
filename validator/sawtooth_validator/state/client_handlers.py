@@ -817,6 +817,7 @@ class StateGetRequest(_ClientRequestHandler):
 
         return self._wrap_response(state_root=state_root, value=value)
 
+
 class RewardListRequest(_ClientRequestHandler):
 
     def __init__(self, block_store, block_manager):
@@ -824,7 +825,7 @@ class RewardListRequest(_ClientRequestHandler):
             client_block_pb2.ClientRewardBlockListRequest,
             client_block_pb2.ClientRewardBlockListResponse,
             validator_pb2.Message.CLIENT_REWARD_BLOCK_LIST_RESPONSE,
-            block_store = block_store)
+            block_store=block_store)
         self._block_manager = block_manager
 
     def _respond(self, request):
@@ -842,16 +843,17 @@ class RewardListRequest(_ClientRequestHandler):
         else:
             raise _ResponseFailed(self._status.NO_ROOT)
 
-
         first_pred_height = request.first_predecessor_height
         last_pred_height = request.last_predecessor_height
 
         padding_traversal = True
         # Fetch the foreign head block.
         try:
-            head_block = BlockWrapper(next(self._block_manager.get([request.head_id])))
+            head_block = BlockWrapper(
+                next(self._block_manager.get([request.head_id])))
         except StopIteration:
-            LOGGER.debug('Unable to find block "%s" in the block manager', request.head_id)
+            LOGGER.debug(
+                'Unable to find block "%s" in the block manager', request.head_id)
             raise _ResponseFailed(self._status.NO_ROOT)
         # malformed/malicious checks
         # try:
@@ -879,44 +881,53 @@ class RewardListRequest(_ClientRequestHandler):
 
         if not padding_traversal:
             try:
-                head_block = self._block_store.get_block_by_number(first_pred_height)
+                head_block = self._block_store.get_block_by_number(
+                    first_pred_height)
             except Exception as e:
-                LOGGER.debug("Unable to fetch first predecessor block in store by blocknum")
+                LOGGER.debug(
+                    "Unable to fetch first predecessor block in store by blocknum")
                 raise _ResponseFailed(self._status.INTERNAL_ERROR)
 
         height = head_block.block_num
         found_in_store = False
         try:
-            #find tip to be rewarded
+            # find tip to be rewarded
             while head_block.block_num != first_pred_height and head_block.block_num == height:
-                head_block = BlockWrapper(next(self._block_manager.get([head_block.previous_block_id])))
+                head_block = BlockWrapper(
+                    next(self._block_manager.get([head_block.previous_block_id])))
                 if head_block.header_signature in self._block_store:
                     found_in_store = True
                 height -= 1
-                #predecessors are in the store already
+                # predecessors are in the store already
                 if found_in_store:
                     try:
-                        head_block = self._block_store.get_block_by_number(first_pred_height)
+                        head_block = self._block_store.get_block_by_number(
+                            first_pred_height)
                         height = first_pred_height
-                        LOGGER.debug("Predecessors found in store, jumping to first_pred at height %s", height)
+                        LOGGER.debug(
+                            "Predecessors found in store, jumping to first_pred at height %s", height)
                         break
                     except KeyError:
-                        LOGGER.warning("Block {} not found while skipping padding blocks".format(head_block.header_signature[:8]))
+                        LOGGER.warning("Block {} not found while skipping padding blocks".format(
+                            head_block.header_signature[:8]))
                         raise _ResponseFailed(self._status.NO_RESOURCE)
 
             blocks = []
             # traverse blocks until we get the last desired block, push blocks until done
             while head_block.block_num != last_pred_height - 1 and head_block.block_num == height:
                 blocks.append(head_block.block)
-                head_block = BlockWrapper(next(self._block_manager.get([head_block.previous_block_id])))
+                head_block = BlockWrapper(
+                    next(self._block_manager.get([head_block.previous_block_id])))
                 height -= 1
 
             if head_block.block_num != height:
-                LOGGER.debug("Found a block_num discrepancy in the reward blocks lookup, block {} should be at height {}.".format(head_block.header_signature, height))
+                LOGGER.debug("Found a block_num discrepancy in the reward blocks lookup, block {} should be at height {}.".format(
+                    head_block.header_signature, height))
                 raise _ResponseFailed(self._status.INTERNAL_ERROR)
 
         except KeyError:
-            LOGGER.warning("Block {} not found while building block reward request.".format(head_block.header_signature[:8]))
+            LOGGER.warning("Block {} not found while building block reward request.".format(
+                head_block.header_signature[:8]))
             raise _ResponseFailed(self._status.NO_RESOURCE)
 
         return self._wrap_response(
