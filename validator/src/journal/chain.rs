@@ -891,7 +891,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                     }
 
                     // Execute pruning:
-                    state.state_pruning_manager.execute(prune_at)
+                    // state.state_pruning_manager.execute(prune_at)
                 }
 
                 // Updated the block, so we're done
