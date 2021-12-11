@@ -123,8 +123,9 @@ impl<B: BlockStatusStore> BlockSchedulerState<B> {
                 continue;
             }
 
+            let previous_validity = self.block_validity(&block.previous_block_id);
             if block.previous_block_id != NULL_BLOCK_IDENTIFIER
-                && self.block_validity(&block.previous_block_id) == BlockStatus::Unknown
+                && previous_validity == BlockStatus::Unknown
             {
                 info!(
                     "During block scheduling, predecessor of block {}, {}, status is unknown. Scheduling all blocks since last predecessor with known status",
@@ -164,11 +165,23 @@ impl<B: BlockStatusStore> BlockSchedulerState<B> {
                         ready.push(block);
                     }
                 }
-            } else {
+            } else if previous_validity == BlockStatus::Valid {
                 debug!("Adding block {} for processing", &block.header_signature);
-
                 self.processing.insert(block.header_signature.clone());
                 ready.push(block);
+            } else if previous_validity == BlockStatus::InValidation {
+                log::debug!("Predecessor for {} in validation, adding to pending", block);
+                self.add_block_to_pending(block);
+            } else if previous_validity == BlockStatus::Invalid {
+                log::debug!("Predecessor for {} invalid, adding to pending", block);
+                self.add_block_to_pending(block);
+            } else {
+                log::error!(
+                    "Predecessor for {} was {:?}, this should not occur",
+                    block,
+                    previous_validity
+                );
+                self.add_block_to_pending(block);
             }
         }
         self.update_gauges();
