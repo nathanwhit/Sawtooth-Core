@@ -37,20 +37,19 @@ impl ExecutionPlatform for PyExecutor {
     fn create_scheduler(
         &self,
         state_hash: &str,
-        block: Option<&Block>,
+        previous_block_id: &str,
     ) -> Result<Box<dyn Scheduler>, cpython::PyErr> {
         let gil = cpython::Python::acquire_gil();
         let py = gil.python();
-        let kwargs = block.map(|block| {
-            let dict = PyDict::new(py);
-            dict.set_item(py, "block_signature", block.header_signature.clone())
-                .unwrap();
-            dict
-        });
         let scheduler = self
             .executor
-            .call_method(py, "create_scheduler", (state_hash,), kwargs.as_ref())
-            .expect(
+            .call_method(
+                py,
+                "create_scheduler",
+                (state_hash, previous_block_id),
+                None,
+            )
+            .expect_pyerr(
                 "no method create_scheduler on sawtooth_validator.execution.py_executor.PyExecutor",
             );
         Ok(Box::new(PyScheduler::new(scheduler)))
