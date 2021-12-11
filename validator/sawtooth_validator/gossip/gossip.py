@@ -576,7 +576,8 @@ class ConnectionManager(InstrumentedThread):
                 the requests will be sent.
         """
         for conn_id in peered_connections:
-            self._gossip.send_block_request("HEAD", conn_id)
+            pass
+            # self._gossip.send_block_request("HEAD", conn_id)
 
     def retry_dynamic_peering(self):
         self._refresh_peer_list(self._gossip.get_peers())
@@ -886,7 +887,8 @@ class ConnectionManager(InstrumentedThread):
                         self._gossip.register_peer(connection_id, endpoint)
                         self._connection_statuses[connection_id] = \
                             PeerStatus.PEER
-                        self._gossip.send_block_request("HEAD", connection_id)
+                        self._gossip.send_block_request(
+                            "fa05d9469b860bd9a65bd2a3da6352e33804ab6c7446e97f05c171aff3e2f48d268921687ea6153248cb26ba362a507f2efab6e0c1c38f4f948555df5f74c57f", connection_id)
                     except PeeringException as e:
                         # Remove unsuccessful peer
                         LOGGER.warning('Unable to successfully peer with '
