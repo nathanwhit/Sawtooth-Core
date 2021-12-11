@@ -672,6 +672,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
     }
 
     fn on_block_validated(&self, block: &Block, result: &BlockValidationResult) {
+        log::trace!("on_block_validated: {}, {:?}", block, result);
         let mut blocks_considered_count =
             COLLECTOR.counter("ChainController.blocks_considered_count", None, None);
         blocks_considered_count.inc();
@@ -684,6 +685,13 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                 // for (moved into chain head in case of commit, dropped otherwise)
                 self.consensus_notifier
                     .notify_block_valid(&block.header_signature);
+
+                // Notify scheduler that the block is complete, so dependent blocks
+                // can begin validation
+                match self.notify_block_committed(&block) {
+                    Ok(_) => (),
+                    Err(err) => warn!("{:?}", err),
+                }
             }
             BlockStatus::Invalid => {
                 self.consensus_notifier
@@ -884,13 +892,6 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
 
                     // Execute pruning:
                     state.state_pruning_manager.execute(prune_at)
-                }
-
-                // Notify scheduler that the block is complete, so dependent blocks
-                // can begin validation
-                match self.notify_block_committed(&block) {
-                    Ok(_) => (),
-                    Err(err) => warn!("{:?}", err),
                 }
 
                 // Updated the block, so we're done
