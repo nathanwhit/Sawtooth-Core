@@ -310,7 +310,7 @@ class TransactionExecutorThread:
                 header_bytes=txn.header,
                 tip=txn_info.tip,
                 block_signature=self._scheduler.block_signature
-                )
+            )
 
             # Since we have already checked if the transaction should be failed
             # all other cases should either be executed or waited for.
@@ -444,8 +444,8 @@ class TransactionExecutor:
 
     def create_scheduler(self,
                          first_state_root,
-                         always_persist=False,
-                         block_signature=None):
+                         previous_block_id,
+                         always_persist=False):
 
         # Useful for a logical first state root of ""
         if not first_state_root:
@@ -456,13 +456,13 @@ class TransactionExecutor:
                 squash_handler=self._context_manager.get_squash_handler(),
                 first_state_hash=first_state_root,
                 always_persist=always_persist,
-                block_signature=block_signature)
+                block_signature=previous_block_id)
         elif self._scheduler_type == "parallel":
             scheduler = ParallelScheduler(
                 squash_handler=self._context_manager.get_squash_handler(),
                 first_state_hash=first_state_root,
                 always_persist=always_persist,
-                block_signature=block_signature)
+                block_signature=previous_block_id)
 
         else:
             raise AssertionError(

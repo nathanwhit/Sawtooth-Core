@@ -26,6 +26,6 @@ pub trait ExecutionPlatform: Sync + Send {
     fn create_scheduler(
         &self,
         state_hash: &str,
-        block: Option<&Block>,
+        previous_block_id: &str,
     ) -> Result<Box<dyn Scheduler>, cpython::PyErr>;
 }
