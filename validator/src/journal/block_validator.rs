@@ -772,7 +772,8 @@ impl BlockValidation for OnChainRulesValidation {
             let settings_view: SettingsView =
                 self.view_factory.create_view(state_root).map_err(|err| {
                     ValidationError::BlockValidationError(format!(
-                        "During validate_on_chain_rules, error creating settings view: {:?}",
+                        "During validate_on_chain_rules (block {}), error creating settings view: {:?}",
+                        block,
                         err
                     ))
                 })?;
