@@ -688,7 +688,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
 
                 // Notify scheduler that the block is complete, so dependent blocks
                 // can begin validation
-                match self.notify_block_committed(&block) {
+                match self.notify_received_valid_result(&block) {
                     Ok(_) => (),
                     Err(err) => warn!("{:?}", err),
                 }
@@ -923,7 +923,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
         }
     }
 
-    fn notify_block_committed(&self, block: &Block) -> Result<(), ChainControllerError> {
+    fn notify_received_valid_result(&self, block: &Block) -> Result<(), ChainControllerError> {
         let sender = self
             .validation_result_sender
             .as_ref()
