@@ -32,6 +32,7 @@ use crate::scheduler::TxnExecutionResult;
 use crate::state::{settings_view::SettingsView, state_view_factory::StateViewFactory};
 
 use log::{error, info, warn};
+use std::collections::HashSet;
 use std::sync::{
     atomic::{AtomicBool, AtomicUsize, Ordering},
     mpsc::{channel, Receiver, RecvTimeoutError, Sender},
@@ -61,6 +62,7 @@ type BlockValidationResultCache =
 #[derive(Clone, Default)]
 pub struct BlockValidationResultStore {
     validation_result_cache: Arc<Mutex<BlockValidationResultCache>>,
+    in_progress_blocks: Arc<Mutex<HashSet<String>>>,
 }
 
 impl BlockValidationResultStore {
@@ -68,22 +70,55 @@ impl BlockValidationResultStore {
         Self::default()
     }
 
-    pub fn insert(&self, result: BlockValidationResult) {
-        self.validation_result_cache
+    pub fn mark_in_progress(&self, block_id: String) {
+        self.in_progress_blocks
             .lock()
             .expect("The mutex is poisoned")
-            .insert(result)
+            .insert(block_id.clone());
+    }
+
+    pub fn is_in_progress(&self, block_id: &str) -> bool {
+        self.in_progress_blocks
+            .lock()
+            .expect("The mutex is poisoned")
+            .contains(block_id)
+    }
+
+    pub fn insert(&self, result: BlockValidationResult) {
+        if result.status != BlockStatus::InValidation {
+            self.in_progress_blocks
+                .lock()
+                .expect("The mutex is poisoned")
+                .remove(&result.block_id);
+            self.validation_result_cache
+                .lock()
+                .expect("The mutex is poisoned")
+                .insert(result);
+        } else {
+            self.in_progress_blocks
+                .lock()
+                .expect("The mutex is poisoned")
+                .insert(result.block_id)
+        }
     }
 
     pub fn get(&self, block_id: &str) -> Option<BlockValidationResult> {
-        self.validation_result_cache
-            .lock()
-            .expect("The mutex is poisoned")
-            .find(|r| r.block_id == block_id)
-            .cloned()
+        if self.is_in_progress(block_id) {
+            Some(BlockValidationResult::new_in_progress(block_id.to_owned()))
+        } else {
+            self.validation_result_cache
+                .lock()
+                .expect("The mutex is poisoned")
+                .find(|r| r.block_id == block_id)
+                .cloned()
+        }
     }
 
     pub fn fail_block(&self, block_id: &str) {
+        self.in_progress_blocks
+            .lock()
+            .expect("The mutex is poisoned")
+            .remove(block_id);
         if let Some(ref mut result) = self
             .validation_result_cache
             .lock()
@@ -91,18 +126,32 @@ impl BlockValidationResultStore {
             .find(|r| r.block_id == block_id)
         {
             result.status = BlockStatus::Invalid
+        } else {
+            self.validation_result_cache
+                .lock()
+                .expect("The mutex is poisoned")
+                .insert(BlockValidationResult {
+                    block_id: block_id.into(),
+                    execution_results: Vec::new(),
+                    num_transactions: 0,
+                    status: BlockStatus::Invalid,
+                });
         }
     }
 }
 
 impl BlockStatusStore for BlockValidationResultStore {
     fn status(&self, block_id: &str) -> BlockStatus {
-        self.validation_result_cache
-            .lock()
-            .expect("The mutex is poisoned")
-            .find(|r| r.block_id == block_id)
-            .map(|r| r.status.clone())
-            .unwrap_or(BlockStatus::Unknown)
+        if self.is_in_progress(block_id) {
+            BlockStatus::InValidation
+        } else {
+            self.validation_result_cache
+                .lock()
+                .expect("The mutex is poisoned")
+                .find(|r| r.block_id == block_id)
+                .map(|r| r.status.clone())
+                .unwrap_or(BlockStatus::Unknown)
+        }
     }
 }
 
@@ -146,6 +195,14 @@ pub struct BlockValidationResult {
 }
 
 impl BlockValidationResult {
+    pub fn new_in_progress(block_id: String) -> Self {
+        Self {
+            block_id,
+            execution_results: Vec::new(),
+            num_transactions: 0,
+            status: BlockStatus::InValidation,
+        }
+    }
     #[allow(dead_code)]
     fn new(
         block_id: String,
