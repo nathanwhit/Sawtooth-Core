@@ -164,7 +164,7 @@ def add(
         validator_pb2.Message.CLIENT_STATE_LIST_REQUEST,
         client_handlers.StateListRequest(
             merkle_db,
-            block_store),
+            block_store, completer._block_manager),
         client_thread_pool)
 
     dispatcher.add_handler(
