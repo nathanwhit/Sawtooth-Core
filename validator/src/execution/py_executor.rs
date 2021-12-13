@@ -49,7 +49,7 @@ impl ExecutionPlatform for PyExecutor {
                 (state_hash, previous_block_id),
                 None,
             )
-            .expect_pyerr(
+            .expect(
                 "no method create_scheduler on sawtooth_validator.execution.py_executor.PyExecutor",
             );
         Ok(Box::new(PyScheduler::new(scheduler)))
