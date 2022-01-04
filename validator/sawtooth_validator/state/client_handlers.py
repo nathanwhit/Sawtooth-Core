@@ -730,12 +730,6 @@ class StateListRequest(_ClientRequestHandler):
             entries,
             self._status.INVALID_PAGING)
 
-        if entries is None:
-            return self._wrap_response(
-                self._status.NO_RESOURCE,
-                state_root=state_root,
-                paging=paging)
-
         return self._wrap_response(
             state_root=state_root,
             paging=paging,
